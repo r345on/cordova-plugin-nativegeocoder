@@ -23,6 +23,16 @@ exports.forwardGeocode = function(success, error, addressString, options) {
     exec(success, error, "NativeGeocoder", "forwardGeocode", [addressString, options]);
 };
 
+/**
+ * Suggests possible addresses that match search input.
+ * @param {*} success {SuggestionAddress[]} Success callback containing array of result objects
+ * @param {*} error Error callback
+ * @param {*} addressString {string} The address to search suggestions
+ */
+exports.addressAutocomplete = function(success, error, addressString) {
+    exec(success, error, "NativeGeocoder", "addressAutocomplete", [addressString]);
+};
+
 /*
 NativeGeocoderResult:
 - latitude
@@ -41,4 +51,9 @@ NativeGeocoderOptions:
 - useLocale = true
 - defaultLocale
 - maxResults = 1
+
+SuggestionAddress:
+- title
+- subtitle
+- coordinate
 */

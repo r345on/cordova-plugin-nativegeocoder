@@ -1,4 +1,5 @@
 import CoreLocation
+import MapKit
 
 struct NativeGeocoderResult: Encodable {
     var latitude: String?
@@ -25,7 +26,36 @@ struct NativeGeocoderOptions: Decodable {
     var maxResults: Int = 1
 }
 
-@objc(NativeGeocoder) class NativeGeocoder: CDVPlugin {
+@propertyWrapper
+struct StringCodedCoordinate: Encodable {
+    var wrappedValue: CLLocationCoordinate2D?
+
+    enum CodingKeys: String, CodingKey {
+        case latitude
+        case longitude
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(wrappedValue?.latitude, forKey: .latitude)
+        try container.encode(wrappedValue?.longitude, forKey: .longitude)
+    }
+}
+
+struct SuggestionAddress: Encodable {
+    var title: String?
+    var subtitle: String?
+    @StringCodedCoordinate var coordinate: CLLocationCoordinate2D?
+
+    init(title: String? = nil, subtitle: String? = nil, coordinate: CLLocationCoordinate2D? = nil) {
+        self.title = title
+        self.subtitle = subtitle
+        self.coordinate = coordinate
+    }
+}
+
+
+@objc(NativeGeocoder) class NativeGeocoder: CDVPlugin, MKLocalSearchCompleterDelegate {
     private lazy var locationManager = CLLocationManager()
     private lazy var geocoder = CLGeocoder()
     typealias ReverseGeocodeCompletionHandler = ([NativeGeocoderResult]?, NativeGeocoderError?) -> Void
@@ -276,5 +306,60 @@ struct NativeGeocoderOptions: Decodable {
             geocoderOptions.maxResults = 1
         }
         return geocoderOptions
+    }
+
+    @objc(:addressAutocomplete)func addressAutocomplete(_ command: CDVInvokedUrlCommand) {
+        if let address = command.arguments[0] as? String {
+            getAddressSuggestions(address, completion: {[weak self] (suggestions) in
+                var pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR)
+
+                if (!suggestions.isEmpty) {
+                    if let encodedResult = try? JSONEncoder().encode(suggestions),
+                       let result = try? JSONSerialization.jsonObject(with: encodedResult, options: .allowFragments) as? [Dictionary<String,Any>] {
+                        pluginResult = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: result)
+                        print("Results:  \(result as AnyObject)")
+                    } else {
+                        pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "Invalid JSON result")
+                    }
+
+                }
+                self?.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
+            })
+        }
+    }
+
+    // Override MKLocalSearchCompleterDelegate
+    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+        searchResults = completer.results.compactMap { result in
+            let street = result.title
+            let subtitle = result.subtitle
+            return SuggestionAddress(title: street, subtitle: subtitle)
+        }
+        searchCompletion?(searchResults)
+    }
+
+    // Override MKLocalSearchCompleterDelegate
+    func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: any Error) {
+        print("Error ", error)
+        searchResults = []
+        searchCompletion?(searchResults)
+    }
+
+    private func initSearchRequest() {
+        completer.region = MKCoordinateRegion(.world)
+        //completer.resultTypes = [.pointOfInterest, .query, .address]
+        completer.resultTypes = [.address]
+    }
+
+    private func getAddressSuggestions(_ address: String, completion: @escaping ([SuggestionAddress]) -> Void) {
+        completer.delegate = self
+
+        if (!searchRequestInitialized) {
+            initSearchRequest()
+            searchRequestInitialized = true
+        }
+
+        completer.queryFragment = address
+        searchCompletion = completion
     }
 }
