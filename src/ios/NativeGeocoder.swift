@@ -312,7 +312,7 @@ struct SuggestionAddress: Encodable {
         return geocoderOptions
     }
 
-    @objc(:addressAutocomplete)func addressAutocomplete(_ command: CDVInvokedUrlCommand) {
+    @objc(addressAutocomplete:)func addressAutocomplete(_ command: CDVInvokedUrlCommand) {
         if let address = command.arguments[0] as? String {
             getAddressSuggestions(address, completion: {[weak self] (suggestions) in
                 var pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR)
