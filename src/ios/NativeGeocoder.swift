@@ -58,6 +58,10 @@ struct SuggestionAddress: Encodable {
 @objc(NativeGeocoder) class NativeGeocoder: CDVPlugin, MKLocalSearchCompleterDelegate {
     private lazy var locationManager = CLLocationManager()
     private lazy var geocoder = CLGeocoder()
+    private lazy var completer = MKLocalSearchCompleter()
+    private lazy var searchResults: [SuggestionAddress] = []
+    private lazy var searchRequestInitialized = false
+    private var searchCompletion: (([SuggestionAddress]) -> Void)?
     typealias ReverseGeocodeCompletionHandler = ([NativeGeocoderResult]?, NativeGeocoderError?) -> Void
     typealias ForwardGeocodeCompletionHandler = ([NativeGeocoderResult]?, NativeGeocoderError?) -> Void
     private static let MAX_RESULTS_COUNT = 5
