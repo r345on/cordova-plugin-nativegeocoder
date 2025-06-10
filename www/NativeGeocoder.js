@@ -1,4 +1,4 @@
-var exec = require('cordova/exec');
+var cordova = require('cordova');
 
 /**
  * Reverse geocode a given latitude and longitude to find location address.
@@ -9,7 +9,7 @@ var exec = require('cordova/exec');
  * @param {*} options {NativeGeocoderOptions} The options
  */
 exports.reverseGeocode = function(success, error, latitude, longitude, options) {
-    exec(success, error, "NativeGeocoder", "reverseGeocode", [latitude, longitude, options]);
+    cordova.exec(success, error, "NativeGeocoder", "reverseGeocode", [latitude, longitude, options]);
 };
 
 /**
@@ -20,7 +20,7 @@ exports.reverseGeocode = function(success, error, latitude, longitude, options) 
  * @param {*} options {NativeGeocoderOptions} The options
  */
 exports.forwardGeocode = function(success, error, addressString, options) {
-    exec(success, error, "NativeGeocoder", "forwardGeocode", [addressString, options]);
+    cordova.exec(success, error, "NativeGeocoder", "forwardGeocode", [addressString, options]);
 };
 
 /**
@@ -30,7 +30,7 @@ exports.forwardGeocode = function(success, error, addressString, options) {
  * @param {*} addressString {string} The address to search suggestions
  */
 exports.addressAutocomplete = function(success, error, addressString) {
-    exec(success, error, "NativeGeocoder", "addressAutocomplete", [addressString]);
+    cordova.exec(success, error, "NativeGeocoder", "addressAutocomplete", [addressString]);
 };
 
 /*
