@@ -30,7 +30,7 @@ exports.forwardGeocode = function(success, error, addressString, options) {
  * @param {*} addressString {string} The address to search suggestions
  */
 exports.addressAutocomplete = function(success, error, addressString) {
-    cordova.exec(null, null, "NativeGeocoder", "addressAutocomplete", [addressString]);
+    cordova.exec(success, error, "NativeGeocoder", "addressAutocomplete", [addressString]);
 };
 
 /*
