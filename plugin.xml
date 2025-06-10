@@ -6,7 +6,7 @@
     <keywords>cordova,geocoder,geocoding,reverse,forward,location</keywords>
 
 	<js-module name="NativeGeocoder" src="www/NativeGeocoder.js">
-		<clobbers target="nativegeocoder" />
+		<clobbers target="cordova.plugins.NativeGeocoder"/>
 	</js-module>
 
     <!-- android -->
