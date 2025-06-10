@@ -314,14 +314,23 @@ struct SuggestionAddress: Encodable {
 
     @objc(addressAutocomplete:)func addressAutocomplete(_ command: CDVInvokedUrlCommand) {
         if let address = command.arguments[0] as? String {
+            var resultsLimit = 10
+            if let limit = command.arguments[1] as? Int {
+                resultsLimit = limit
+            }
+
             getAddressSuggestions(address, completion: {[weak self] (suggestions) in
                 var pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR)
 
                 if (!suggestions.isEmpty) {
-                    if let encodedResult = try? JSONEncoder().encode(suggestions),
+                    var results = suggestions
+                    if (suggestions.count > resultsLimit) {
+                        results = Array(suggestions[..<resultsLimit])
+                    }
+                    print("Result count \(results.count)")
+                    if let encodedResult = try? JSONEncoder().encode(results),
                        let result = try? JSONSerialization.jsonObject(with: encodedResult, options: .allowFragments) as? [Dictionary<String,Any>] {
                         pluginResult = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: result)
-                        print("Results:  \(result as AnyObject)")
                     } else {
                         pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "Invalid JSON result")
                     }
@@ -351,11 +360,17 @@ struct SuggestionAddress: Encodable {
 
     private func initSearchRequest() {
         completer.region = MKCoordinateRegion(.world)
-        //completer.resultTypes = [.pointOfInterest, .query, .address]
-        completer.resultTypes = [.address]
+
+        if #available(iOS 13, *) {
+            // completer.resultTypes = [.pointOfInterest, .query, .address]
+            completer.resultTypes = [.address, .pointOfInterest]
+        } else {
+            // fallback for iOS  9.3 - 13
+            completer.filterType = .locationsOnly
+        }
     }
 
-    private func getAddressSuggestions(_ address: String, completion: @escaping ([SuggestionAddress]) -> Void) {
+    private func getAddressSuggestions(_ address: String, completion: @escaping ([SuggestionAddress]) -> Void, _ limit: Int) {
         completer.delegate = self
 
         if (!searchRequestInitialized) {

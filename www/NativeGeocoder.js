@@ -29,8 +29,8 @@ exports.forwardGeocode = function(success, error, addressString, options) {
  * @param {*} error Error callback
  * @param {*} addressString {string} The address to search suggestions
  */
-exports.addressAutocomplete = function(success, error, addressString) {
-    exec(success, error, "NativeGeocoder", "addressAutocomplete", [addressString]);
+exports.addressAutocomplete = function(success, error, addressString, limit) {
+    exec(success, error, "NativeGeocoder", "addressAutocomplete", [addressString, limit]);
 };
 
 /*
