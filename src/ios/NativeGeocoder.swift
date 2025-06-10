@@ -370,7 +370,7 @@ struct SuggestionAddress: Encodable {
         }
     }
 
-    private func getAddressSuggestions(_ address: String, completion: @escaping ([SuggestionAddress]) -> Void, _ limit: Int) {
+    private func getAddressSuggestions(_ address: String, completion: @escaping ([SuggestionAddress]) -> Void) {
         completer.delegate = self
 
         if (!searchRequestInitialized) {
