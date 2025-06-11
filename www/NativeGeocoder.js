@@ -28,9 +28,21 @@ exports.forwardGeocode = function(success, error, addressString, options) {
  * @param {*} success {SuggestionAddress[]} Success callback containing array of result objects
  * @param {*} error Error callback
  * @param {*} addressString {string} The address to search suggestions
+ * @param {*} maxResults {number} Max number of results
  */
-exports.addressAutocomplete = function(success, error, addressString, limit) {
-    exec(success, error, "NativeGeocoder", "addressAutocomplete", [addressString, limit]);
+exports.addressAutocomplete = function(success, error, addressString, maxResults) {
+    exec(success, error, "NativeGeocoder", "addressAutocomplete", [addressString, maxResults]);
+};
+
+/**
+ * Forward bounding box to a given address.
+ * @param {*} success {BoundingBoxResult} Success callback containing array of result objects
+ * @param {*} error Error callback
+ * @param {*} addressString {string} The address to be geocoded
+ * @param {*} options {NativeGeocoderOptions} The options
+ */
+exports.getBoundingBox = function(success, error, addressString, options) {
+    exec(success, error, "NativeGeocoder", "getBoundingBox", [addressString, options]);
 };
 
 /*
@@ -56,4 +68,10 @@ SuggestionAddress:
 - title
 - subtitle
 - coordinate
+
+BoundingBoxResult:
+- minLon
+- minLat
+- maxLon
+- maxLat
 */
