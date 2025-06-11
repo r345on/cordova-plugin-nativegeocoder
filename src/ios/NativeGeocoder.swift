@@ -411,19 +411,24 @@ struct SuggestionAddress: Encodable {
                 options.maxResults = maxResultsOption
             }
 
-            getBoundingBoxHandler(address, options: options, completion: { [weak self] (resultObj, error) in
+            getBoundingBoxHandler(address, options: options, completion: { [weak self] (placemarks, error) in
                 if let error = error {
                     pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: error.localizedDescription)
                 } else {
-                    if let placemark = resultObj?[0] {
+                    if let placemark = placemarks?[0] {
                         let region = MKCoordinateRegion(center: placemark.location!.coordinate, span: self?.spanForPlacemark(placemark) ?? MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1))
-                        let boundingBox = self?.defineBoundingBox(for: region)
-                        if let encodedResult = try? JSONEncoder().encode(boundingBox),
-                            let result = try? JSONSerialization.jsonObject(with: encodedResult, options: .allowFragments) as? [Dictionary<String,Any>] {
-                            pluginResult = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: result)
+                        if let boundingBox = self?.defineBoundingBox(for: region) as? BoundingBoxResult {
+                            if let encodedResult = try? JSONEncoder().encode(boundingBox),
+                                let result = try? JSONSerialization.jsonObject(with: encodedResult, options: .allowFragments) as? Dictionary<String,Any> {
+                                pluginResult = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: result)
+                            } else {
+                                pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "Invalid JSON result")
+                            }
                         } else {
-                            pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "Invalid JSON result")
+                            pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "Invalid bounding box result")
                         }
+                    } else {
+                        pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "No results for this address")
                     }
                 }
 
