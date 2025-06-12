@@ -334,7 +334,6 @@ struct SuggestionAddress: Encodable {
                     if (suggestions.count > resultsLimit) {
                         results = Array(suggestions[..<resultsLimit])
                     }
-                    print("Result count \(results.count)")
                     if let encodedResult = try? JSONEncoder().encode(results),
                        let result = try? JSONSerialization.jsonObject(with: encodedResult, options: .allowFragments) as? [Dictionary<String,Any>] {
                         pluginResult = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: result)
@@ -391,101 +390,105 @@ struct SuggestionAddress: Encodable {
 
     @objc(getBoundingBox:)func getBoundingBox(_ command: CDVInvokedUrlCommand) {
 
-        var pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR)
+            var pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR)
 
-        if let address = command.arguments[0] as? String {
+            if let address = command.arguments[0] as? String {
 
-            if (geocoder.isGeocoding) {
-                pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "Geocoder is busy. Please try again later.")
-                self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
-                return
-            }
-
-            var options = NativeGeocoderOptions(useLocale: true, defaultLocale: nil, maxResults: 1)
-            if let optionsDict = command.arguments[1] as? NSDictionary {
-                let useLocaleOption = optionsDict.value(forKey: "useLocale") as? Bool ?? true
-                let defaultLocaleOption = optionsDict.value(forKey: "defaultLocale") as? String
-                let maxResultsOption = optionsDict.value(forKey: "maxResults") as? Int ?? 1
-                options.useLocale = useLocaleOption
-                options.defaultLocale = defaultLocaleOption
-                options.maxResults = maxResultsOption
-            }
-
-            getBoundingBoxHandler(address, options: options, completion: { [weak self] (placemarks, error) in
-                if let error = error {
-                    pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: error.localizedDescription)
-                } else {
-                    if let placemark = placemarks?[0] {
-                        let region = MKCoordinateRegion(center: placemark.location!.coordinate, span: self?.spanForPlacemark(placemark) ?? MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1))
-                        if let boundingBox = self?.defineBoundingBox(for: region) as? BoundingBoxResult {
-                            if let encodedResult = try? JSONEncoder().encode(boundingBox),
-                                let result = try? JSONSerialization.jsonObject(with: encodedResult, options: .allowFragments) as? Dictionary<String,Any> {
-                                pluginResult = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: result)
-                            } else {
-                                pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "Invalid JSON result")
-                            }
-                        } else {
-                            pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "Invalid bounding box result")
-                        }
-                    } else {
-                        pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "No results for this address")
-                    }
+                if (geocoder.isGeocoding) {
+                    pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "Geocoder is busy. Please try again later.")
+                    self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
+                    return
                 }
 
-                self?.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
-            })
-        }
-        else {
-            pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "Expected a non-empty string argument.")
-            self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
-        }
-    }
+                var options = NativeGeocoderOptions(useLocale: true, defaultLocale: nil, maxResults: 1)
+                if let optionsDict = command.arguments[1] as? NSDictionary {
+                    let useLocaleOption = optionsDict.value(forKey: "useLocale") as? Bool ?? true
+                    let defaultLocaleOption = optionsDict.value(forKey: "defaultLocale") as? String
+                    let maxResultsOption = optionsDict.value(forKey: "maxResults") as? Int ?? 1
+                    options.useLocale = useLocaleOption
+                    options.defaultLocale = defaultLocaleOption
+                    options.maxResults = maxResultsOption
+                }
 
-    private func getBoundingBoxHandler (_ address: String, options: NativeGeocoderOptions, completion: @escaping ([CLPlacemark]?, Error?) -> Void){
-        let geocoderOptions = getNativeGeocoderOptions(from: options)
+                getBoundingBoxHandler(address, options: options, completion: { [weak self] (placemarks, error) in
+                    if let error = error {
+                        pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: error.localizedDescription)
+                    } else {
+                        if let placemark = placemarks?[0] {
+                            let region = MKCoordinateRegion(center: placemark.location!.coordinate, span: self?.spanForPlacemark(placemark) ?? MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1))
+                            if let boundingBox = self?.defineBoundingBox(for: region) as? BoundingBoxResult {
+                                if let encodedResult = try? JSONEncoder().encode(boundingBox),
+                                    let result = try? JSONSerialization.jsonObject(with: encodedResult, options: .allowFragments) as? Dictionary<String,Any> {
+                                    pluginResult = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: result)
+                                } else {
+                                    pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "Invalid JSON result")
+                                }
+                            } else {
+                                pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "Invalid bounding box result")
+                            }
+                        } else {
+                            pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "No results for this address")
+                        }
+                    }
 
-        if #available(iOS 11, *) {
-            var locale: Locale?
-            if let defaultLocaleString = geocoderOptions.defaultLocale {
-                locale = Locale.init(identifier: defaultLocaleString)
-            } else if (geocoderOptions.useLocale == false) {
-                locale = Locale.init(identifier: "en_US")
+                    self?.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
+                })
             }
-
-            geocoder.geocodeAddressString(address, in: nil, preferredLocale: locale, completionHandler: { (placemarks, error) in
-                completion(placemarks, error)
-            })
-        } else {
-            // fallback for < iOS 11
-            geocoder.geocodeAddressString(address, completionHandler: { (placemarks, error) in completion(placemarks, error) })
+            else {
+                pluginResult = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: "Expected a non-empty string argument.")
+                self.commandDelegate!.send(pluginResult, callbackId: command.callbackId)
+            }
         }
-    }
 
-    private func spanForPlacemark(_ placemark: CLPlacemark) -> MKCoordinateSpan {
-        if placemark.subThoroughfare != nil {
-            // Street-level
-            return MKCoordinateSpan(latitudeDelta: 0.002, longitudeDelta: 0.002)
-        } else if placemark.locality != nil {
-            // City-level
-            return MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
-        } else if placemark.administrativeArea != nil {
-            // Region/state-level
-            return MKCoordinateSpan(latitudeDelta: 1.0, longitudeDelta: 1.0)
-        } else {
-            // Country-level
-            return MKCoordinateSpan(latitudeDelta: 10.0, longitudeDelta: 10.0)
+        private func getBoundingBoxHandler (_ address: String, options: NativeGeocoderOptions, completion: @escaping ([CLPlacemark]?, Error?) -> Void){
+            let geocoderOptions = getNativeGeocoderOptions(from: options)
+
+            if #available(iOS 11, *) {
+                var locale: Locale?
+                if let defaultLocaleString = geocoderOptions.defaultLocale {
+                    locale = Locale.init(identifier: defaultLocaleString)
+                } else if (geocoderOptions.useLocale == false) {
+                    locale = Locale.init(identifier: "en_US")
+                }
+
+                geocoder.geocodeAddressString(address, in: nil, preferredLocale: locale, completionHandler: { (placemarks, error) in
+                    completion(placemarks, error)
+                })
+            } else {
+                // fallback for < iOS 11
+                geocoder.geocodeAddressString(address, completionHandler: { (placemarks, error) in completion(placemarks, error) })
+            }
         }
-    }
 
-    private func defineBoundingBox(for region: MKCoordinateRegion) -> BoundingBoxResult {
-        let center = region.center
-        let span = region.span
+        private func spanForPlacemark(_ placemark: CLPlacemark) -> MKCoordinateSpan {
+            let EXCEPTIONS = ["Vatican City", "Monaco"]
+            if placemark.subThoroughfare != nil {
+                // Street-level
+                return MKCoordinateSpan(latitudeDelta: 0.002, longitudeDelta: 0.002)
+            } else if EXCEPTIONS.contains(placemark.country!.description) {
+                return MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+            } else if placemark.locality != nil {
+                // City-level
+                return MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
+            } else if placemark.administrativeArea != nil {
+                // Region/state-level
+                return MKCoordinateSpan(latitudeDelta: 1.0, longitudeDelta: 1.0)
+            } else {
+                // Country-level
+                return MKCoordinateSpan(latitudeDelta: 10.0, longitudeDelta: 10.0)
+            }
+        }
 
-        let minLat = String(format: "%.1f", (center.latitude  - (span.latitudeDelta  / 2.0)))
-        let maxLat = String(format: "%.1f",(center.latitude  + (span.latitudeDelta  / 2.0)))
-        let minLon = String(format: "%.1f",(center.longitude - (span.longitudeDelta / 2.0)))
-        let maxLon = String(format: "%.1f",(center.longitude + (span.longitudeDelta / 2.0)))
+        private func defineBoundingBox(for region: MKCoordinateRegion) -> BoundingBoxResult {
+            let center = region.center
+            let span = region.span
+            let formatRule = "%.5f"
 
-        return BoundingBoxResult(minLon: minLon, minLat: minLat, maxLon: maxLon, maxLat: maxLat)
-    }
+            let minLat = String(format: formatRule, (center.latitude  - (span.latitudeDelta  / 2.0)))
+            let maxLat = String(format: formatRule,(center.latitude  + (span.latitudeDelta  / 2.0)))
+            let minLon = String(format: formatRule,(center.longitude - (span.longitudeDelta / 2.0)))
+            let maxLon = String(format: formatRule,(center.longitude + (span.longitudeDelta / 2.0)))
+
+            return BoundingBoxResult(minLon: minLon, minLat: minLat, maxLon: maxLon, maxLat: maxLat)
+        }
 }
